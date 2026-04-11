@@ -26,7 +26,7 @@ def load_assets():
         with open(ASSETS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     return {
-        'kiosk': 1, 'shaurma': 1, 'apple': 1,
+        'kiosk': 2, 'shaurma': 2, 'apple': 2,
         'lada': 1, 'toyota': 1, 'bmw': 1,
         'apartment': 1, 'house': 1, 'tower': 1
     }
