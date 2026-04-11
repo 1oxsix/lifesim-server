@@ -23,6 +23,7 @@ def get_conn():
 def init_db():
     with get_conn() as conn:
         with conn.cursor() as cur:
+            # Таблица игроков (не меняется)
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS players (
                     id TEXT PRIMARY KEY,
@@ -36,24 +37,38 @@ def init_db():
                     savedata TEXT DEFAULT ''
                 )
             ''')
+            
+            # Таблица лимитов активов (не меняется смысл, только поведение)
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS assets (
                     id TEXT PRIMARY KEY,
                     count INT DEFAULT 0
                 )
             ''')
-            cur.execute('SELECT COUNT(*) FROM assets')
-            if cur.fetchone()[0] == 0:
-                for asset_id, count in ASSET_DEFAULTS.items():
-                    cur.execute(
-                        'INSERT INTO assets (id, count) VALUES (%s, %s) ON CONFLICT DO NOTHING',
-                        (asset_id, count)
-                    )
+            
+            # НОВАЯ таблица! Личные активы каждого игрока
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS player_assets (
+                    player_id TEXT NOT NULL,
+                    asset_id TEXT NOT NULL,
+                    count INT DEFAULT 0,
+                    PRIMARY KEY (player_id, asset_id),
+                    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+                )
+            ''')
+            
+            # Обновляем лимиты из конфига (ВСЕГДА, не только при первом запуске)
+            for asset_id, limit_count in ASSET_DEFAULTS.items():
+                cur.execute('''
+                    INSERT INTO assets (id, count) VALUES (%s, %s)
+                    ON CONFLICT (id) DO UPDATE SET count = %s
+                ''', (asset_id, limit_count, limit_count))
+        
         conn.commit()
 
 init_db()
 
-# ── Сохранить игрока ──
+# ── Сохрани��ь игрока ──
 @app.route('/save', methods=['POST'])
 def save_player():
     try:
@@ -94,7 +109,7 @@ def save_player():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-# ── Загрузить игрока ──
+# ── Загру��ить игрока ──
 @app.route('/load/<player_id>', methods=['GET'])
 def load_player(player_id):
     try:
@@ -145,7 +160,7 @@ def get_friends():
     except Exception as e:
         return jsonify([]), 500
 
-# ── Получить все счётчики активов ──
+# ── Получить все счётчики активов (максимальные лимиты) ──
 @app.route('/assets', methods=['GET'])
 def get_assets():
     try:
@@ -158,7 +173,23 @@ def get_assets():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ── Обновить счётчик актива ──
+# ── Получить активы конкретного игрока ──
+@app.route('/player-assets/<player_id>', methods=['GET'])
+def get_player_assets(player_id):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    SELECT asset_id, count FROM player_assets 
+                    WHERE player_id = %s
+                ''', (player_id,))
+                rows = cur.fetchall()
+                assets = {row[0]: row[1] for row in rows}
+                return jsonify({'playerAssets': assets})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ── Обновить активы игрока (покупка/продажа) ──
 @app.route('/asset', methods=['POST'])
 def update_asset():
     try:
@@ -167,30 +198,68 @@ def update_asset():
         change = data.get('change', 0)
         player_id = data.get('playerId')
 
-        if not asset_id:
-            return jsonify({'success': False, 'error': 'no assetId'}), 400
+        if not asset_id or not player_id:
+            return jsonify({'success': False, 'error': 'missing assetId or playerId'}), 400
 
         with get_conn() as conn:
             with conn.cursor() as cur:
+                # Получаем максимальный лимит актива
                 cur.execute('SELECT count FROM assets WHERE id = %s', (asset_id,))
                 row = cur.fetchone()
-                current = row[0] if row else 0
+                max_limit = row[0] if row else 0
 
-                if change == -1 and current <= 0:
-                    cur.execute('SELECT id, count FROM assets')
-                    counts = {r[0]: r[1] for r in cur.fetchall()}
-                    return jsonify({'success': False, 'error': 'limit exceeded', 'counts': counts}), 400
-
+                # Получаем сколько сейчас у игрока этого актива
                 cur.execute(
-                    'UPDATE assets SET count = count + %s WHERE id = %s',
-                    (change, asset_id)
+                    'SELECT count FROM player_assets WHERE player_id = %s AND asset_id = %s',
+                    (player_id, asset_id)
                 )
-                cur.execute('SELECT id, count FROM assets')
-                counts = {r[0]: r[1] for r in cur.fetchall()}
-            conn.commit()
+                row = cur.fetchone()
+                player_current = row[0] if row else 0
 
-        print(f"Player {player_id} updated {asset_id}. Remaining: {counts.get(asset_id)}")
-        return jsonify({'success': True, 'counts': counts})
+                # ПОКУПКА (change = +1)
+                if change == 1:
+                    # Сколько всего куплено ВСЕ игроками этого актива
+                    cur.execute(
+                        'SELECT COALESCE(SUM(count), 0) FROM player_assets WHERE asset_id = %s',
+                        (asset_id,)
+                    )
+                    total_bought = cur.fetchone()[0]
+
+                    # Проверяем, есть ли место
+                    if total_bought >= max_limit:
+                        return jsonify({'success': False, 'error': 'limit exceeded'}), 400
+
+                    # Увеличиваем или создаём запись у игрока
+                    cur.execute('''
+                        INSERT INTO player_assets (player_id, asset_id, count)
+                        VALUES (%s, %s, 1)
+                        ON CONFLICT (player_id, asset_id) DO UPDATE SET count = count + 1
+                    ''', (player_id, asset_id))
+
+                # ПРОДАЖА (change = -1)
+                elif change == -1:
+                    # Проверяем, есть ли что продавать
+                    if player_current <= 0:
+                        return jsonify({'success': False, 'error': 'nothing to sell'}), 400
+
+                    # Уменьшаем количество
+                    cur.execute('''
+                        UPDATE player_assets SET count = count - 1
+                        WHERE player_id = %s AND asset_id = %s
+                    ''', (player_id, asset_id))
+
+                conn.commit()
+
+                # Возвращаем обновлённое состояние
+                cur.execute('''
+                    SELECT asset_id, count FROM player_assets 
+                    WHERE player_id = %s
+                ''', (player_id,))
+                rows = cur.fetchall()
+                player_assets = {row[0]: row[1] for row in rows}
+
+                print(f"Player {player_id} updated {asset_id} by {change}. Now has: {player_assets.get(asset_id, 0)}")
+                return jsonify({'success': True, 'playerAssets': player_assets})
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
