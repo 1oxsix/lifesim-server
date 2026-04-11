@@ -26,9 +26,9 @@ def load_assets():
         with open(ASSETS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     return {
-        'kiosk': 5, 'shaurma': 3, 'apple': 2,
-        'lada': 5, 'toyota': 3, 'bmw': 1,
-        'apartment': 10, 'house': 5, 'tower': 2
+        'kiosk': 1, 'shaurma': 1, 'apple': 1,
+        'lada': 1, 'toyota': 1, 'bmw': 1,
+        'apartment': 1, 'house': 1, 'tower': 1
     }
 
 # ── Сохранить счётчики активов ──
