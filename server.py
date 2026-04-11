@@ -23,7 +23,6 @@ def get_conn():
 def init_db():
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # Таблица игроков
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS players (
                     id TEXT PRIMARY KEY,
@@ -33,17 +32,16 @@ def init_db():
                     level INT DEFAULT 1,
                     popularity INT DEFAULT 0,
                     businesses INT DEFAULT 0,
-                    updated_at BIGINT DEFAULT 0
+                    updated_at BIGINT DEFAULT 0,
+                    savedata TEXT DEFAULT ''
                 )
             ''')
-            # Таблица активов
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS assets (
                     id TEXT PRIMARY KEY,
                     count INT DEFAULT 0
                 )
             ''')
-            # Заполнить дефолтные активы если таблица пустая
             cur.execute('SELECT COUNT(*) FROM assets')
             if cur.fetchone()[0] == 0:
                 for asset_id, count in ASSET_DEFAULTS.items():
@@ -63,11 +61,13 @@ def save_player():
         if not data or 'id' not in data:
             return jsonify({'ok': False, 'error': 'no id'}), 400
 
+        savedata = data.get('savedata', '')
+
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute('''
-                    INSERT INTO players (id, name, photo, money, level, popularity, businesses, updated_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO players (id, name, photo, money, level, popularity, businesses, updated_at, savedata)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         name = EXCLUDED.name,
                         photo = EXCLUDED.photo,
@@ -75,7 +75,8 @@ def save_player():
                         level = EXCLUDED.level,
                         popularity = EXCLUDED.popularity,
                         businesses = EXCLUDED.businesses,
-                        updated_at = EXCLUDED.updated_at
+                        updated_at = EXCLUDED.updated_at,
+                        savedata = EXCLUDED.savedata
                 ''', (
                     str(data['id']),
                     data.get('name', 'Игрок'),
@@ -84,11 +85,26 @@ def save_player():
                     int(data.get('level', 1)),
                     int(data.get('popularity', 0)),
                     int(data.get('businesses', 0)),
-                    data.get('updatedAt', 0)
+                    data.get('updatedAt', 0),
+                    savedata
                 ))
             conn.commit()
         return jsonify({'ok': True})
 
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+# ── Загрузить игрока ──
+@app.route('/load/<player_id>', methods=['GET'])
+def load_player(player_id):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT savedata FROM players WHERE id = %s', (player_id,))
+                row = cur.fetchone()
+                if row and row[0]:
+                    return jsonify({'ok': True, 'savedata': row[0]})
+                return jsonify({'ok': False})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
@@ -156,7 +172,6 @@ def update_asset():
 
         with get_conn() as conn:
             with conn.cursor() as cur:
-                # Проверяем лимит при покупке
                 cur.execute('SELECT count FROM assets WHERE id = %s', (asset_id,))
                 row = cur.fetchone()
                 current = row[0] if row else 0
@@ -166,7 +181,6 @@ def update_asset():
                     counts = {r[0]: r[1] for r in cur.fetchall()}
                     return jsonify({'success': False, 'error': 'limit exceeded', 'counts': counts}), 400
 
-                # Обновляем счётчик
                 cur.execute(
                     'UPDATE assets SET count = count + %s WHERE id = %s',
                     (change, asset_id)
