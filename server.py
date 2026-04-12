@@ -12,7 +12,7 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 ASSET_DEFAULTS = {
     'kiosk': 5, 'shaurma': 5, 'apple': 2, 'sneaker': 2,
     'lada': 1, 'toyota': 1, 'bmw': 1,
-    'apartment': 1, 'house': 1, 'tower': 1
+    'apartment': 5, 'house': 1, 'tower': 1
 }
 
 # ── Подключение к БД ──
