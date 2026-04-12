@@ -15,7 +15,7 @@ ASSET_DEFAULTS = {
     'lada': 5, 'toyota': 5, 'bmw': 5, 'velo': 5,
     'lada2107': 5, 'lada2115': 5,
     'galant': 5, 'haval': 5, 'solaris': 5, 'kawasaki': 5,
-    'apartment': 5, 'house': 5, 'tower': 5
+    'apartment': 5, 'house': 5, 'tower': 5, 'dom': 5, 'obshaga': 5, 'shalash': 5, 'kvartira': 5, 
 }
 
 # ── Подключение к БД ──
