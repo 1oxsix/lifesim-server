@@ -10,9 +10,9 @@ CORS(app)
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 ASSET_DEFAULTS = {
-    'kiosk': 5, 'shaurma': 5, 'apple': 2, 'sneaker': 2,
-    'lada': 1, 'toyota': 1, 'bmw': 1,
-    'apartment': 5, 'house': 1, 'tower': 1
+    'kiosk': 5, 'shaurma': 5, 'apple': 5, 'sneaker': 5,
+    'lada': 5, 'toyota': 5, 'bmw': 5,
+    'apartment': 5, 'house': 5, 'tower': 5
 }
 
 # ── Подключение к БД ──
