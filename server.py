@@ -10,7 +10,7 @@ import psycopg2.extras
 # Базовые цены инвестиций (должны совпадать с клиентом)
 INVESTMENTS_BASE = {
     'pear': 50,
-    'sasung': 50,
+    'sasung': 100,
     'gold': 2000,
     'bct': 8000,
 }
@@ -47,10 +47,10 @@ CORS(app)
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 ASSET_DEFAULTS = {
-    'kiosk': 25, 'shaurma': 25, 'apple': 25, 'sneaker': 25, 'zavod': 1, 'cum': 1, 'neft': 1,
-    'pear': 50, 'sasung': 50, 'gold': 3, 'bct': 3,
-    'lada': 5, 'toyota': 5, 'bmw': 5, 'velo': 5, 'lada2107': 5, 'lada2115': 5, 'galant': 5, 'haval': 5, 'solaris': 5, 'kawasaki': 5,
-    'apartment': 5, 'house': 5, 'tower': 5, 'dom': 5, 'obshaga': 5, 'shalash': 5, 'kvartira': 5
+    'kiosk': 100, 'shaurma': 100, 'apple': 100, 'sneaker': 100, 'zavod': 1, 'cum': 1, 'neft': 1,
+    'pear': 500, 'sasung': 500, 'gold': 500, 'bct': 500,
+    'lada': 50, 'toyota': 50, 'bmw': 50, 'velo': 50, 'lada2107': 50, 'lada2115': 50, 'galant': 50, 'haval': 50, 'solaris': 50, 'kawasaki': 50,
+    'apartment': 50, 'house': 50, 'tower': 50, 'dom': 50, 'obshaga': 50, 'shalash': 50, 'kvartira': 50
 }
 
 # ── Подключение к БД ──
