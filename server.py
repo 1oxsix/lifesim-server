@@ -1,8 +1,45 @@
 from flask import Flask, request, jsonify
+import threading
+import math
+import random
 from flask_cors import CORS
 import os
 import psycopg2
 import psycopg2.extras
+
+# Базовые цены инвестиций (должны совпадать с клиентом)
+INVESTMENTS_BASE = {
+    'pear': 50,
+    'sasung': 50,
+    'gold': 2000,
+    'bct': 2000,
+}
+
+market_prices = {k: v for k, v in INVESTMENTS_BASE.items()}
+market_trends = {k: 'up' for k in INVESTMENTS_BASE}
+
+def tick_market():
+    global market_prices, market_trends
+    for asset_id, base_price in INVESTMENTS_BASE.items():
+        # 20% шанс сменить тренд
+        if random.random() < 0.2:
+            market_trends[asset_id] = 'down' if market_trends[asset_id] == 'up' else 'up'
+        # Изменение цены 2-8%
+        pct = random.uniform(0.02, 0.08)
+        if market_trends[asset_id] == 'up':
+            market_prices[asset_id] = math.floor(market_prices[asset_id] * (1 + pct))
+        else:
+            market_prices[asset_id] = math.floor(market_prices[asset_id] * (1 - pct))
+        # Границы мин 10% макс 500%
+        market_prices[asset_id] = max(
+            math.floor(base_price * 0.1),
+            min(market_prices[asset_id], base_price * 5)
+        )
+    # Повторяем каждые 30 секунд
+    threading.Timer(30.0, tick_market).start()
+
+# Запускаем рынок
+tick_market()
 
 app = Flask(__name__)
 CORS(app)
@@ -11,6 +48,7 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 
 ASSET_DEFAULTS = {
     'kiosk': 5, 'shaurma': 5, 'apple': 5, 'sneaker': 5, 'zavod': 1, 'cum': 1, 'neft': 1,
+    'pear': 50, 'sasung': 50, 'gold': 3, 'bct': 3,
     'lada': 5, 'toyota': 5, 'bmw': 5, 'velo': 5, 'lada2107': 5, 'lada2115': 5, 'galant': 5, 'haval': 5, 'solaris': 5, 'kawasaki': 5,
     'apartment': 5, 'house': 5, 'tower': 5, 'dom': 5, 'obshaga': 5, 'shalash': 5, 'kvartira': 5
 }
@@ -93,6 +131,13 @@ def save_player():
 
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/market')
+def get_market():
+    return jsonify({
+        'prices': market_prices,
+        'trends': market_trends
+    })
 
 # ── Загрузить игрока ──
 @app.route('/load/<player_id>', methods=['GET'])
