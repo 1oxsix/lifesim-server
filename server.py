@@ -50,7 +50,8 @@ ASSET_DEFAULTS = {
     'kiosk': 100, 'shaurma': 100, 'apple': 100, 'sneaker': 100, 'zavod': 1, 'cum': 1, 'neft': 1,
     'pear': 500, 'sasung': 500, 'gold': 500, 'bct': 500,
     'lada': 50, 'toyota': 50, 'bmw': 50, 'velo': 50, 'lada2107': 50, 'lada2115': 50, 'galant': 50, 'haval': 50, 'solaris': 50, 'kawasaki': 50,
-    'apartment': 50, 'house': 50, 'tower': 50, 'dom': 50, 'obshaga': 50, 'shalash': 50, 'kvartira': 50
+    'apartment': 50, 'house': 50, 'tower': 50, 'dom': 50, 'obshaga': 50, 'shalash': 50, 'kvartira': 50, 'studio': 50,'townhouse': 50, '3kvartira': 50,
+    'country_house': 50,'duplex': 50,'luxury_apartment': 50,'villa': 50,'manor': 50,'castle': 50,'sky_palace': 50,'private_island': 50,'royal_palace': 50,
 }
 
 # ── Подключение к БД ──
