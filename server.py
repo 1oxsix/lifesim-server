@@ -47,7 +47,7 @@ CORS(app)
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 ASSET_DEFAULTS = {
-    'kiosk': 100, 'shaurma': 100, 'apple': 100, 'sneaker': 100, 'zavod': 1, 'cum': 1, 'neft': 1,
+    'kiosk': 1000, 'shaurma': 1000, 'apple': 1000, 'sneaker': 1000, 'zavod': 100, 'cum': 100, 'neft': 100,
     'pear': 500, 'sasung': 500, 'gold': 500, 'bct': 500,
     'lada': 50, 'toyota': 50, 'bmw': 50, 'velo': 50, 'lada2107': 50, 'lada2115': 50, 'galant': 50, 'haval': 50, 'solaris': 50, 'kawasaki': 50, 'lada2108': 50, 'jaecoo': 50, 'cruiser': 50, 'maybach': 50, 'kamaz': 50,'sls': 20,'g63': 20,'urus': 20,
     'apartment': 50, 'house': 50, 'tower': 50, 'dom': 50, 'obshaga': 50, 'shalash': 50, 'kvartira': 50, 'studio': 50,'townhouse': 50, '3kvartira': 50,
