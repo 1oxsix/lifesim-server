@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import threading
 import math
 import random
+import time
 from flask_cors import CORS
 import os
 import psycopg2
@@ -242,6 +243,20 @@ def update_asset():
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# ── Онлайн игроков (активны за последние 3 минуты) ──
+@app.route('/online', methods=['GET'])
+def get_online():
+    try:
+        now = math.floor(time.time())
+        three_min_ago = now - 180
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT COUNT(*) FROM players WHERE updated_at > %s', (three_min_ago,))
+                count = cur.fetchone()[0]
+        return jsonify({'ok': True, 'online': count})
+    except Exception as e:
+        return jsonify({'ok': True, 'online': 0})
 
 # ── Проверка что сервер живой ──
 @app.route('/ping', methods=['GET'])
