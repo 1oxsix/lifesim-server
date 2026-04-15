@@ -15,7 +15,7 @@ INVESTMENTS_BASE = {
     'bct': 20000,
     'epfyr': 4500,
     'mentcash': 6000,
-    'neft': 8000,
+    'neft1': 8000,
 }
 
 market_prices = {k: v for k, v in INVESTMENTS_BASE.items()}
