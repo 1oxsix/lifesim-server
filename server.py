@@ -21,24 +21,19 @@ market_trends = {k: 'up' for k in INVESTMENTS_BASE}
 def tick_market():
     global market_prices, market_trends
     for asset_id, base_price in INVESTMENTS_BASE.items():
-        # 20% шанс сменить тренд
         if random.random() < 0.2:
             market_trends[asset_id] = 'down' if market_trends[asset_id] == 'up' else 'up'
-        # Изменение цены 2-8%
         pct = random.uniform(0.02, 0.08)
         if market_trends[asset_id] == 'up':
             market_prices[asset_id] = math.floor(market_prices[asset_id] * (1 + pct))
         else:
             market_prices[asset_id] = math.floor(market_prices[asset_id] * (1 - pct))
-        # Границы мин 10% макс 500%
         market_prices[asset_id] = max(
             math.floor(base_price * 0.1),
             min(market_prices[asset_id], base_price * 5)
         )
-    # Повторяем каждые 30 секунд
     threading.Timer(30.0, tick_market).start()
 
-# Запускаем рынок
 tick_market()
 
 app = Flask(__name__)
@@ -54,11 +49,9 @@ ASSET_DEFAULTS = {
     'country_house': 50,'duplex': 50,'luxury_apartment': 50,'villa': 50,'manor': 50,'castle': 50,'sky_palace': 50,'private_island': 50,'royal_palace': 50
 }
 
-# ── Подключение к БД ──
 def get_conn():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
-# ── Создать таблицы если не существуют ──
 def init_db():
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -72,8 +65,12 @@ def init_db():
                     popularity INT DEFAULT 0,
                     businesses INT DEFAULT 0,
                     updated_at BIGINT DEFAULT 0,
-                    savedata TEXT DEFAULT ''
+                    savedata TEXT DEFAULT '',
+                    platform TEXT DEFAULT 'tg'
                 )
+            ''')
+            cur.execute('''
+                ALTER TABLE players ADD COLUMN IF NOT EXISTS platform TEXT DEFAULT 'tg'
             ''')
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS assets (
@@ -105,8 +102,8 @@ def save_player():
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute('''
-                    INSERT INTO players (id, name, photo, money, level, popularity, businesses, updated_at, savedata)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO players (id, name, photo, money, level, popularity, businesses, updated_at, savedata, platform)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         name = EXCLUDED.name,
                         photo = EXCLUDED.photo,
@@ -115,7 +112,8 @@ def save_player():
                         popularity = EXCLUDED.popularity,
                         businesses = EXCLUDED.businesses,
                         updated_at = EXCLUDED.updated_at,
-                        savedata = EXCLUDED.savedata
+                        savedata = EXCLUDED.savedata,
+                        platform = EXCLUDED.platform
                 ''', (
                     str(data['id']),
                     data.get('name', 'Игрок'),
@@ -125,7 +123,8 @@ def save_player():
                     int(data.get('popularity', 0)),
                     int(data.get('businesses', 0)),
                     data.get('updatedAt', 0),
-                    savedata
+                    savedata,
+                    data.get('platform', 'tg')
                 ))
             conn.commit()
         return jsonify({'ok': True})
@@ -161,7 +160,7 @@ def get_top():
         with get_conn() as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute('''
-                    SELECT id, name, photo, money, level, popularity, businesses, updated_at as "updatedAt"
+                    SELECT id, name, photo, money, level, popularity, businesses, updated_at as "updatedAt", platform
                     FROM players
                     ORDER BY money DESC
                     LIMIT 100
@@ -182,7 +181,7 @@ def get_friends():
         with get_conn() as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute('''
-                    SELECT id, name, photo, money, level, popularity, businesses, updated_at as "updatedAt"
+                    SELECT id, name, photo, money, level, popularity, businesses, updated_at as "updatedAt", platform
                     FROM players
                     WHERE id = ANY(%s)
                     ORDER BY money DESC
@@ -222,7 +221,7 @@ def update_asset():
                 row = cur.fetchone()
                 current = row[0] if row else 0
 
-                if change == -1 and current <= 0:
+                if change < 0 and current + change < 0:
                     cur.execute('SELECT id, count FROM assets')
                     counts = {r[0]: r[1] for r in cur.fetchall()}
                     return jsonify({'success': False, 'error': 'limit exceeded', 'counts': counts}), 400
