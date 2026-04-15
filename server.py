@@ -105,28 +105,30 @@ def save_player():
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute('''
-                    INSERT INTO players (id, name, photo, money, level, popularity, businesses, updated_at, savedata)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (id) DO UPDATE SET
-                        name = EXCLUDED.name,
-                        photo = EXCLUDED.photo,
-                        money = EXCLUDED.money,
-                        level = EXCLUDED.level,
-                        popularity = EXCLUDED.popularity,
-                        businesses = EXCLUDED.businesses,
-                        updated_at = EXCLUDED.updated_at,
-                        savedata = EXCLUDED.savedata
-                ''', (
-                    str(data['id']),
-                    data.get('name', 'Игрок'),
-                    data.get('photo', ''),
-                    int(data.get('money', 0)),
-                    int(data.get('level', 1)),
-                    int(data.get('popularity', 0)),
-                    int(data.get('businesses', 0)),
-                    data.get('updatedAt', 0),
-                    savedata
-                ))
+                INSERT INTO players (id, name, photo, money, level, popularity, businesses, updated_at, savedata, platform)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    photo = EXCLUDED.photo,
+                    money = EXCLUDED.money,
+                    level = EXCLUDED.level,
+                    popularity = EXCLUDED.popularity,
+                    businesses = EXCLUDED.businesses,
+                    updated_at = EXCLUDED.updated_at,
+                    savedata = EXCLUDED.savedata,
+                    platform = EXCLUDED.platform
+            ''', (
+                str(data['id']),
+                data.get('name', 'Игрок'),
+                data.get('photo', ''),
+                int(data.get('money', 0)),
+                int(data.get('level', 1)),
+                int(data.get('popularity', 0)),
+                int(data.get('businesses', 0)),
+                data.get('updatedAt', 0),
+                savedata,
+                data.get('platform', 'tg')
+            ))
             conn.commit()
         return jsonify({'ok': True})
 
@@ -161,10 +163,10 @@ def get_top():
         with get_conn() as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute('''
-                    SELECT id, name, photo, money, level, popularity, businesses, updated_at as "updatedAt"
+                    SELECT id, name, photo, money, level, popularity, businesses, updated_at as "updatedAt", platform
                     FROM players
-                    ORDER BY money DESC
-                    LIMIT 100
+                     ORDER BY money DESC
+                     LIMIT 100
                 ''')
                 return jsonify(cur.fetchall())
     except Exception as e:
