@@ -12,7 +12,10 @@ INVESTMENTS_BASE = {
     'pear': 50,
     'sasung': 100,
     'gold': 2000,
-    'bct': 8000,
+    'bct': 20000,
+    'epfyr': 4500,
+    'mentcash': 6000,
+    'neft': 8000,
 }
 
 market_prices = {k: v for k, v in INVESTMENTS_BASE.items()}
